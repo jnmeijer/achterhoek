@@ -170,14 +170,13 @@ public class Main {
 
         // First names
         String firstNames = restParts[0];
-        //System.err.println("firstNames="+firstNames);
-        PersonIdentity childIdentity = PersonIdentity.parseFirstNames(firstNames);
+        // Remove stray LFs in name
+        PersonIdentity childIdentity = PersonIdentity.parseFirstNames(firstNames.replaceAll("\n", ""));
         System.err.println("childIdentity="+childIdentity);
 
         rest = restParts[1];
 
         // Birth date
-        //restParts = rest.split("\n");
         int firstLFIndex = rest.indexOf('\n');
         restParts[0] = rest.substring(0, firstLFIndex); // dob
         restParts[1] = rest.substring(firstLFIndex+1, rest.length()); // rest
@@ -202,6 +201,13 @@ public class Main {
 
         // Prep the rest by replacing LFs with spaces
         rest = rest.replace('\n', ' ');
+
+        // Remove notes in (the first) [].
+        int noteIndexStart = rest.indexOf('[');
+        if (noteIndexStart >= 0) {
+            int noteIndexEnd = rest.indexOf(']');
+            rest = rest.substring(0, noteIndexStart) + rest.substring(noteIndexEnd+1, rest.length());
+        }
 
         // Clean up by removing the trailing period, if present
         if (rest.charAt(rest.length()-1) == '.') {

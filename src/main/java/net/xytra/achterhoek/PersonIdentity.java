@@ -12,7 +12,19 @@ public class PersonIdentity {
     }
 
     public static PersonIdentity parseFirstNames(String firstNames) {
-        return new PersonIdentity(firstNames.split(" "), new String[] {}, null);
+        return new PersonIdentity(normalizeCapitalization(firstNames.split(" ")), new String[] {}, null);
+    }
+
+    private static String[] normalizeCapitalization(String[] name) {
+        for (int i=0; i<name.length; i++) {
+            name[i] = normalizeCapitalization(name[i]);
+        }
+        return name;
+    }
+
+    // ABCdef -> Abcdef
+    private static String normalizeCapitalization(String name) {
+        return name.substring(0, 1).toUpperCase() + name.substring(1, name.length()).toLowerCase();
     }
 
     public static PersonIdentity parseFullName(String fullName) {
@@ -57,6 +69,7 @@ public class PersonIdentity {
                     case "te":
                     case "ten":
                     case "ter":
+                    case "van":
                         surnameIndex = parts.length-2;
                         break;
                     default:
