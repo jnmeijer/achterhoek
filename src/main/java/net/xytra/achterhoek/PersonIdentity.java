@@ -2,17 +2,19 @@ package net.xytra.achterhoek;
 
 public class PersonIdentity {
     private String[] forenames;
+    private String patronym;
     private String[] surnames;
     private String role;
 
-    private PersonIdentity(String[] forenames, String[] surnames, String role) {
+    private PersonIdentity(String[] forenames, String patronym, String[] surnames, String role) {
         this.forenames = forenames;
+        this.patronym = patronym;
         this.surnames = surnames;
         this.role = role;
     }
 
     public static PersonIdentity parseFirstNames(String firstNames) {
-        return new PersonIdentity(normalizeCapitalization(firstNames.split(" ")), new String[] {}, null);
+        return new PersonIdentity(normalizeCapitalization(firstNames.split(" ")), null, new String[] {}, null);
     }
 
     private static String[] normalizeCapitalization(String[] name) {
@@ -44,12 +46,28 @@ public class PersonIdentity {
         int parenthesisIndex = fullName.indexOf('(');
         if (parenthesisIndex >= 0) {
             String startPart = fullName.substring(0, parenthesisIndex).trim();
-            String endPart = fullName.substring(fullName.indexOf(')')+1, fullName.length()).trim();
+            String endPart = fullName.substring(fullName.indexOf(')')+1).trim();
 
             // rebuild fullName
             fullName = startPart + ' ' + endPart;
         }
 
+        // Filter out a trailing " uit ..."
+        int uitIndex = fullName.indexOf(" uit ");
+        if (uitIndex > 0) {
+            fullName = fullName.substring(0, uitIndex);
+        }
+
+        // Filter out trailing " Lz."
+        int lzIndex = fullName.indexOf(" Lz.");
+        if (lzIndex > 0) {
+            fullName = fullName.substring(0, lzIndex);
+        }
+
+        // Filter out "wijlen "
+        if (fullName.startsWith("wijlen ")) {
+            fullName = fullName.substring(7);
+        }
         String[] parts = fullName.split(" ");
         int surnameIndex;
 
@@ -58,8 +76,8 @@ public class PersonIdentity {
         } else if (parts.length == 2) {
             surnameIndex = 1; // 2nd name is always surname
         } else { // over 2
-            // special case: van d* X
-            if ("van".equals(parts[parts.length-3])) {
+            // special case: van/op d*/het X
+            if ("op".equals(parts[parts.length-3]) || "van".equals(parts[parts.length-3])) {
                 surnameIndex = parts.length-3;
             } else {
                 switch (parts[parts.length-2]) {
@@ -88,7 +106,7 @@ public class PersonIdentity {
             surnames[i-surnameIndex] = parts[i];
         }
 
-        return new PersonIdentity(forenames, surnames, role);
+        return new PersonIdentity(forenames, null, surnames, role);
     }
 
     public String toString() {
@@ -100,6 +118,13 @@ public class PersonIdentity {
                 sb.append(' ');
             }
             sb.append(forenames[i]);
+        }
+
+        // separator
+        sb.append('|');
+
+        if (patronym != null) {
+            sb.append(patronym);
         }
 
         // separator

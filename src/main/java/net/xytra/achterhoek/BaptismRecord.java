@@ -1,9 +1,10 @@
 package net.xytra.achterhoek;
 
 public class BaptismRecord {
-    private String docParish;
+    private String fileName;
     private int page;
     private int entry;
+    private String docParish;
     private EventDate birthDate;
     private EventDate baptismDate;
     private String baptismLocation;
@@ -14,13 +15,14 @@ public class BaptismRecord {
     private String location;
     private PersonIdentity attestor;
 
-    public BaptismRecord(String docParish, int page, int entry,
+    public BaptismRecord(String fileName, int page, int entry, String docParish,
             EventDate birthDate, EventDate baptismDate, String baptismLocation,
             PersonIdentity child, String[] childQualifiers, PersonIdentity parent1,
             PersonIdentity parent2, String location, PersonIdentity attestor) {
-        this.docParish = docParish;
+        this.fileName = fileName;
         this.page = page;
         this.entry = entry;
+        this.docParish = docParish;
         this.birthDate = birthDate;
         this.baptismDate = baptismDate;
         this.baptismLocation = baptismLocation;
@@ -48,10 +50,10 @@ public class BaptismRecord {
     }
 
     public String toString() {
-        return "baptism,"
-                + docParish + ','
+        return fileName + ','
                 + page + ','
                 + entry + ','
+                + docParish + ','
                 + birthDate + ','
                 + baptismDate + ','
                 + (baptismLocation == null ? "" : baptismLocation) + ','
@@ -59,7 +61,7 @@ public class BaptismRecord {
                 + getSerializedChildQualifiers() + ','
                 + (parent1 == null ? "" : parent1) + ','
                 + (parent2 == null ? "" : parent2) + ','
-                + (location == null ? "" : location) + ','
+                + (location == null ? "" : "\"" + location + '"') + ','
                 + (attestor == null ? "" : attestor) + '\n';
     }
 }

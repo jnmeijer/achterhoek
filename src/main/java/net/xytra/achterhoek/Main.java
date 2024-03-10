@@ -14,7 +14,7 @@ public class Main {
 
     public static void main(String[] args) {
         String inputFileName = null;
-        String outputFileName = "output.txt";
+        String outputFileName = "output.csv";
 
         for (int i=0; i<args.length; i++) {
             if ("-o".equals(args[i])) {
@@ -49,7 +49,7 @@ public class Main {
             outputWriter = new BufferedWriter(new FileWriter(outputFile));
             inputReader = new BufferedReader(new FileReader(inputFile));
 
-            processInput(inputReader, outputWriter);
+            processInput(inputFile.getName(), inputReader, outputWriter);
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
@@ -66,7 +66,7 @@ public class Main {
         }
     }
 
-    private static void processInput(BufferedReader inputReader, BufferedWriter outputWriter) throws IOException {
+    private static void processInput(String fileName, BufferedReader inputReader, BufferedWriter outputWriter) throws IOException {
         int pageNum = 1;
         int entryNum = 1;
         String parish = null;
@@ -78,7 +78,7 @@ public class Main {
         while (!indexReached && (newLine = inputReader.readLine()) != null) {
             //outputWriter.write(newLine);
             System.err.println("newLine="+newLine);
-            //if (pageNum==23&&entryNum==15) {
+            //if (pageNum==4&&entryNum==10) {
             //    throw new RuntimeException("Stop");
             //}
             if (newLine.startsWith("Nederduits Gereformeerde Gemeente")) {
@@ -87,7 +87,7 @@ public class Main {
 
                 // Possibly end of record; process
                 if (existingLine != null) {
-                    outputWriter.write(processRecord(parish, pageNum, entryNum, existingLine).toString());
+                    outputWriter.write(processRecord(fileName, pageNum, entryNum, parish, existingLine).toString());
                     // reset
                     existingLine = null;
                     entryNum++;
@@ -115,7 +115,7 @@ public class Main {
             } else if (DATE_RECORD_START_PATTERN.matcher(newLine).matches()) {
                 // Possibly end of record; process
                 if (existingLine != null) {
-                    outputWriter.write(processRecord(parish, pageNum, entryNum, existingLine).toString());
+                    outputWriter.write(processRecord(fileName, pageNum, entryNum, parish, existingLine).toString());
                     // reset
                     existingLine = null;
                     entryNum++;
@@ -132,16 +132,16 @@ public class Main {
         }
     }
 
-    private static BaptismRecord processRecord(String parish, int page, int entry, String record) {
+    private static BaptismRecord processRecord(String fileName, int page, int entry, String parish, String record) {
         switch (parish) {
             case "LOCHEM":
-                return processRecordLochem(page, entry, record);
+                return processRecordLochem(fileName, page, entry, record);
             default:
                 throw new RuntimeException("Unexpected parish: " + parish);
         }
     }
 
-    private static BaptismRecord processRecordLochem(int page, int entry, String record) {
+    private static BaptismRecord processRecordLochem(String fileName, int page, int entry, String record) {
         System.err.println("record="+record);
         EventDate baptismDate = EventDate.parseDate(record.substring(0, 10));
         System.err.println("baptismDate="+baptismDate);
@@ -207,6 +207,7 @@ public class Main {
         if (noteIndexStart >= 0) {
             int noteIndexEnd = rest.indexOf(']');
             rest = rest.substring(0, noteIndexStart) + rest.substring(noteIndexEnd+1, rest.length());
+            rest = rest.trim();
         }
 
         // Clean up by removing the trailing period, if present
@@ -252,9 +253,10 @@ public class Main {
             }
 
             System.err.println("rest="+rest);
-            // First, catch a missing comma before the location
+            // First, catch a missing comma before the "op het" location, but only if another location does not succeed
             int locationIndex = rest.indexOf(" op het ");
-            if (locationIndex > 0 && rest.charAt(locationIndex-1) != ',') {
+            int commaIndex = rest.indexOf(',');
+            if (locationIndex > 0 && rest.charAt(locationIndex-1) != ',' && commaIndex < 1) {
                 restParts = new String[2];
                 restParts[0] = rest.substring(0, locationIndex);
                 restParts[1] = rest.substring(locationIndex+1, rest.length());
@@ -278,8 +280,8 @@ public class Main {
             restParts = restParts[0].split(" getuige ");
             if (restParts.length > 1) {
                 // Only keep the name, before the comma, if there is a comma
-                int commaIndex = restParts[1].indexOf(',');
-                if (commaIndex > 0) {
+                int attestorCommaIndex = restParts[1].indexOf(',');
+                if (attestorCommaIndex > 0) {
                     restParts[1] = restParts[1].substring(0, restParts[1].indexOf(','));
                 }
 
@@ -292,10 +294,8 @@ public class Main {
             System.err.println("parent2Identity="+parent2Identity);
         }
 
-        return new BaptismRecord("Lochem", page, entry, birthDate, baptismDate,
+        return new BaptismRecord(fileName, page, entry, "Lochem", birthDate, baptismDate,
                 baptismLocation, childIdentity, qualifiers,
                 parent1Identity, parent2Identity, location, attestor);
-
-//        throw new RuntimeException("stop here");
     }
 }
