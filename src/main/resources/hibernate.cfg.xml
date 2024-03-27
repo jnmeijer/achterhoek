@@ -25,6 +25,7 @@
         <property name="hibernate.dbcp.minIdle">5</property>
         <property name="hibernate.dbcp.maxWaitMillis">-1</property>
         <mapping class="net.xytra.achterhoek.entity.BaptismRecord" />
+        <mapping class="net.xytra.achterhoek.entity.DocumentFile" />
         <mapping class="net.xytra.achterhoek.entity.EventDate" />
         <mapping class="net.xytra.achterhoek.entity.PersonIdentity" />
     </session-factory>

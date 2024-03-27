@@ -23,8 +23,6 @@ public class EventDate {
     @Column(name = "ID")
     private int id;
 
-    //@Column
-    //private Date date;
     @Column(name = "TS")
     private long timestamp;
 
@@ -43,7 +41,6 @@ public class EventDate {
 
     private int getYear() {
         Calendar calendar = GregorianCalendar.getInstance();
-        //calendar.setTime(getDate());
         calendar.setTimeInMillis(timestamp);
         return calendar.get(Calendar.YEAR);
     }

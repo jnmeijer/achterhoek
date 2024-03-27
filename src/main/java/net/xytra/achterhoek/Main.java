@@ -12,6 +12,7 @@ import org.hibernate.Session;
 import org.hibernate.Transaction;
 
 import net.xytra.achterhoek.entity.BaptismRecord;
+import net.xytra.achterhoek.entity.DocumentFile;
 import net.xytra.achterhoek.entity.EventDate;
 import net.xytra.achterhoek.entity.PersonIdentity;
 import net.xytra.achterhoek.entity.RecordId;
@@ -86,6 +87,10 @@ public class Main {
 
         Transaction transaction = null;
         try (Session session = HibernateUtil.getSessionFactory().openSession()) {
+            transaction = session.beginTransaction();
+            DocumentFile docFile = DocumentFile.getFileForName(session, fileName);
+            transaction.commit();
+
             // start a transaction
             transaction = session.beginTransaction();
 
@@ -100,7 +105,7 @@ public class Main {
 
                     // Possibly end of record; process
                     if (existingLine != null) {
-                        BaptismRecord br = processRecord(fileName, pageNum, entryNum, parish, existingLine);
+                        BaptismRecord br = processRecord(docFile, pageNum, entryNum, parish, existingLine);
                         outputWriter.write(br.toString());
                         session.persist(br);
 
@@ -131,7 +136,7 @@ public class Main {
                 } else if (DATE_RECORD_START_PATTERN.matcher(newLine).matches()) {
                     // Possibly end of record; process
                     if (existingLine != null) {
-                        BaptismRecord br = processRecord(fileName, pageNum, entryNum, parish, existingLine);
+                        BaptismRecord br = processRecord(docFile, pageNum, entryNum, parish, existingLine);
                         outputWriter.write(br.toString());
                         session.persist(br);
 
@@ -162,16 +167,16 @@ public class Main {
         
     }
 
-    private static BaptismRecord processRecord(String fileName, int page, int entry, String parish, String record) {
+    private static BaptismRecord processRecord(DocumentFile docFile, int page, int entry, String parish, String record) {
         switch (parish) {
             case "LOCHEM":
-                return processRecordLochem(fileName, page, entry, record);
+                return processRecordLochem(docFile, page, entry, record);
             default:
                 throw new RuntimeException("Unexpected parish: " + parish);
         }
     }
 
-    private static BaptismRecord processRecordLochem(String fileName, int page, int entry, String record) {
+    private static BaptismRecord processRecordLochem(DocumentFile docFile, int page, int entry, String record) {
         System.err.println("record="+record);
         EventDate baptismDate = EventDate.parseDate(record.substring(0, 10));
         System.err.println("baptismDate="+baptismDate);
@@ -324,7 +329,7 @@ public class Main {
             System.err.println("parent2Identity="+parent2Identity);
         }
 
-        return new BaptismRecord(new RecordId(fileName, page, entry), "Lochem", birthDate, baptismDate,
+        return new BaptismRecord(new RecordId(docFile, page, entry), "Lochem", birthDate, baptismDate,
                 baptismLocation, childIdentity, qualifiers,
                 parent1Identity, parent2Identity, location, attestor);
     }
