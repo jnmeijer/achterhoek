@@ -8,6 +8,14 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.regex.Pattern;
 
+import org.hibernate.Session;
+import org.hibernate.Transaction;
+
+import net.xytra.achterhoek.entity.BaptismRecord;
+import net.xytra.achterhoek.entity.EventDate;
+import net.xytra.achterhoek.entity.PersonIdentity;
+import net.xytra.achterhoek.entity.RecordId;
+
 public class Main {
     private static Pattern DATE_RECORD_START_PATTERN = Pattern.compile("^\\d\\d[.]\\d\\d[.]\\d\\d\\d\\d .*" );
     private static Pattern YEAR_LINE_PATTERN = Pattern.compile("^\\d\\d\\d\\d$");
@@ -75,61 +83,83 @@ public class Main {
         String existingLine = null;
         boolean indexReached = false;
         String newLine;
-        while (!indexReached && (newLine = inputReader.readLine()) != null) {
-            //outputWriter.write(newLine);
-            System.err.println("newLine="+newLine);
-            //if (pageNum==4&&entryNum==10) {
-            //    throw new RuntimeException("Stop");
-            //}
-            if (newLine.startsWith("Nederduits Gereformeerde Gemeente")) {
-                parish = newLine.substring(34);
-                System.err.println("parish="+parish);
 
-                // Possibly end of record; process
-                if (existingLine != null) {
-                    outputWriter.write(processRecord(fileName, pageNum, entryNum, parish, existingLine).toString());
-                    // reset
-                    existingLine = null;
-                    entryNum++;
-                }
-            } else if (newLine.startsWith("Doopboek")) {
-                docName = newLine;
-                System.err.println("docName="+docName);
-            } else if (newLine.startsWith("Tijdvak")) {
-                sectionName = newLine;
-                System.err.println("sectionname="+sectionName);
-            } else if (newLine.startsWith("Index - ")) {
-                indexReached = true;
-            } else if (newLine.endsWith("www.genealogiedomein.nl")) {
-                // Ignore safely
-            } else if (newLine.startsWith("- ")) {
-                String pageId = newLine.substring(2);
-                pageId = pageId.substring(0, pageId.indexOf(" -"));
-                pageNum = Integer.valueOf(pageId);
-                System.err.println("pageNum="+pageNum);
-                entryNum = 1; // restart at 1 on new page
-            } else if (newLine.startsWith("Transcriptie")) {
-                // Ignore safely
-            } else if (YEAR_LINE_PATTERN.matcher(newLine).matches()) {
-                System.err.println("year="+newLine);
-            } else if (DATE_RECORD_START_PATTERN.matcher(newLine).matches()) {
-                // Possibly end of record; process
-                if (existingLine != null) {
-                    outputWriter.write(processRecord(fileName, pageNum, entryNum, parish, existingLine).toString());
-                    // reset
-                    existingLine = null;
-                    entryNum++;
-                }
+        Transaction transaction = null;
+        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
+            // start a transaction
+            transaction = session.beginTransaction();
 
-                // Start accumulating
-                existingLine = newLine;
-            } else {
-                if (existingLine == null) {
-                    throw new RuntimeException("Expected existingLine not null");
+            while (!indexReached && (newLine = inputReader.readLine()) != null) {
+                System.err.println("newLine="+newLine);
+                /*if (pageNum==1&&entryNum==2) {
+                    throw new RuntimeException("Stop");
+                }*/
+                if (newLine.startsWith("Nederduits Gereformeerde Gemeente")) {
+                    parish = newLine.substring(34);
+                    System.err.println("parish="+parish);
+
+                    // Possibly end of record; process
+                    if (existingLine != null) {
+                        BaptismRecord br = processRecord(fileName, pageNum, entryNum, parish, existingLine);
+                        outputWriter.write(br.toString());
+                        session.persist(br);
+
+                        // reset
+                        existingLine = null;
+                        entryNum++;
+                    }
+                } else if (newLine.startsWith("Doopboek")) {
+                    docName = newLine;
+                    System.err.println("docName="+docName);
+                } else if (newLine.startsWith("Tijdvak")) {
+                    sectionName = newLine;
+                    System.err.println("sectionname="+sectionName);
+                } else if (newLine.startsWith("Index - ")) {
+                    indexReached = true;
+                } else if (newLine.endsWith("www.genealogiedomein.nl")) {
+                    // Ignore safely
+                } else if (newLine.startsWith("- ")) {
+                    String pageId = newLine.substring(2);
+                    pageId = pageId.substring(0, pageId.indexOf(" -"));
+                    pageNum = Integer.valueOf(pageId);
+                    System.err.println("pageNum="+pageNum);
+                    entryNum = 1; // restart at 1 on new page
+                } else if (newLine.startsWith("Transcriptie")) {
+                    // Ignore safely
+                } else if (YEAR_LINE_PATTERN.matcher(newLine).matches()) {
+                    System.err.println("year="+newLine);
+                } else if (DATE_RECORD_START_PATTERN.matcher(newLine).matches()) {
+                    // Possibly end of record; process
+                    if (existingLine != null) {
+                        BaptismRecord br = processRecord(fileName, pageNum, entryNum, parish, existingLine);
+                        outputWriter.write(br.toString());
+                        session.persist(br);
+
+                        // reset
+                        existingLine = null;
+                        entryNum++;
+                    }
+
+                    // Start accumulating
+                    existingLine = newLine;
+                } else {
+                    if (existingLine == null) {
+                        throw new RuntimeException("Expected existingLine not null");
+                    }
+                    existingLine = existingLine + '\n' + newLine;
                 }
-                existingLine = existingLine + '\n' + newLine;
             }
+            // commit transaction
+            transaction.commit();
+        } catch (Exception e) {
+            e.printStackTrace();
+            if (transaction != null) {
+                transaction.rollback();
+            }
+        } finally {
+            HibernateUtil.shutdown();
         }
+        
     }
 
     private static BaptismRecord processRecord(String fileName, int page, int entry, String parish, String record) {
@@ -294,7 +324,7 @@ public class Main {
             System.err.println("parent2Identity="+parent2Identity);
         }
 
-        return new BaptismRecord(fileName, page, entry, "Lochem", birthDate, baptismDate,
+        return new BaptismRecord(new RecordId(fileName, page, entry), "Lochem", birthDate, baptismDate,
                 baptismLocation, childIdentity, qualifiers,
                 parent1Identity, parent2Identity, location, attestor);
     }

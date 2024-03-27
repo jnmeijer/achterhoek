@@ -1,9 +1,31 @@
-package net.xytra.achterhoek;
+package net.xytra.achterhoek.entity;
 
+import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+
+@Entity
+@Table(name = "PERSON")
 public class PersonIdentity {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
+    private int id;
+
+    @ElementCollection
     private String[] forenames;
+
+    @Column
     private String patronym;
+
+    @ElementCollection
     private String[] surnames;
+
+    @Column
     private String role;
 
     private PersonIdentity(String[] forenames, String patronym, String[] surnames, String role) {

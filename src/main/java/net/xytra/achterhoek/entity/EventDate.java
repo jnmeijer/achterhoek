@@ -1,22 +1,40 @@
-package net.xytra.achterhoek;
+package net.xytra.achterhoek.entity;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
-import java.util.Date;
 import java.util.GregorianCalendar;
 
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import net.xytra.achterhoek.DatePrecision;
+
+@Entity
+@Table(name = "EVENT_DATE")
 public class EventDate {
-    private Date date;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "ID")
+    private int id;
+
+    //@Column
+    //private Date date;
+    @Column(name = "TS")
+    private long timestamp;
+
+    @Column(name = "PRECISION")
+    @Enumerated(EnumType.STRING)
     private DatePrecision precision;
 
-    private EventDate(Date date, DatePrecision precision) {
-        this.date = date;
+    private EventDate(long time, DatePrecision precision) {
+        this.timestamp = time;
         this.precision = precision;
-    }
-
-    public Date getDate() {
-        return date;
     }
 
     public DatePrecision getPrecision() {
@@ -25,7 +43,8 @@ public class EventDate {
 
     private int getYear() {
         Calendar calendar = GregorianCalendar.getInstance();
-        calendar.setTime(getDate());
+        //calendar.setTime(getDate());
+        calendar.setTimeInMillis(timestamp);
         return calendar.get(Calendar.YEAR);
     }
 
@@ -56,7 +75,7 @@ public class EventDate {
         if (precision == null) {
             return null;
         } else {
-            return new EventDate(calendar.getTime(), precision);
+            return new EventDate(calendar.getTimeInMillis(), precision);
         }
     }
 
@@ -94,7 +113,10 @@ public class EventDate {
 
         int year = getYear();
         if (parts.length > 2) {
-            year = Integer.parseInt(parts[2]);
+            int birthYear = Integer.parseInt(parts[2]);
+            if (birthYear < 100) {
+                year = (year / 100) * 100 + birthYear;
+            }
         }
 
         Calendar calendar = GregorianCalendar.getInstance();
@@ -111,11 +133,14 @@ public class EventDate {
             }
         }
 
-        return new EventDate(calendar.getTime(), precision);
+        return new EventDate(calendar.getTimeInMillis(), precision);
     }
 
     public String toString() {
+        Calendar calendar = GregorianCalendar.getInstance();
+        calendar.setTimeInMillis(timestamp);
+
         DateFormat df = new SimpleDateFormat("yyyy-MM-dd");
-        return df.format(getDate());
+        return df.format(calendar.getTime());
     }
 }
